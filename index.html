@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="ne">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>System Security</title>
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Courier+New:wght@700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <style>
+        /* --- MAIN CSS --- */
+        :root { --primary: #4361ee; --bg: #f4f7fe; --text: #333; --card: #fff; --danger: #e63946; --success: #06d6a0; }
+        body { font-family: 'Poppins', sans-serif; margin: 0; background: var(--bg); color: var(--text); -webkit-font-smoothing: antialiased; }
+
+        input, textarea { color: #000 !important; opacity: 1; }
+        input::placeholder { color: #999 !important; }
+        
+        .header { background: #fff; padding: 15px 20px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 5px rgba(0,0,0,0.05); position: sticky; top: 0; z-index: 100; height: 60px; box-sizing: border-box; }
+        .menu-icon { font-size: 22px; cursor: pointer; color: #333; }
+        .header-title { font-weight: 600; font-size: 18px; color: var(--primary); position: absolute; left: 50%; transform: translateX(-50%); }
+        
+        .add-btn { font-size: 26px; color: var(--primary); cursor: pointer; display: none; transition: transform 0.2s; } 
+        .add-btn:active { transform: scale(0.9); }
+        .add-btn.show { display: block; }
+
+        .container { padding: 20px; max-width: 600px; margin: auto; padding-bottom: 80px; }
+
+        /* CARDS */
+        .total-card { padding: 25px; border-radius: 20px; text-align: center; color: white; margin-bottom: 25px; box-shadow: 0 8px 20px rgba(0,0,0,0.1); }
+        .bg-exp { background: linear-gradient(135deg, #4361ee, #3a0ca3); }
+        .bg-inc { background: linear-gradient(135deg, #06d6a0, #04b386); }
+        .bg-dark { background: linear-gradient(135deg, #333, #555); } 
+        
+        .t-lbl { font-size: 13px; opacity: 0.9; letter-spacing: 0.5px; }
+        .t-amt { font-size: 36px; font-weight: 700; display: block; margin-top: 5px; }
+
+        .card { background: #fff; padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); margin-bottom: 20px; }
+        
+        /* INPUTS */
+        .input-wrap { display: flex; align-items: center; background: #f8f9fa; border: 1.5px solid #e0e0e0; border-radius: 12px; padding: 0 15px; margin-bottom: 15px; }
+        .input-wrap:focus-within { border-color: var(--primary); background: #fff; }
+        .input-wrap.calc { border-color: #06d6a0; background: #f0fff4; }
+        .input-wrap i { color: #888; width: 25px; text-align: center; font-size: 16px; }
+        input, textarea { border: none; outline: none; flex: 1; background: transparent; padding: 14px 5px; font-size: 15px; font-family: 'Poppins', sans-serif; }
+        .date-input { cursor: pointer; background-color: transparent !important; }
+
+        .note-btn { display: flex; justify-content: space-between; align-items: center; color: var(--primary); font-weight: 500; font-size: 14px; padding: 5px 0; margin-bottom: 10px; cursor: pointer; }
+        #note-area { display: none; }
+        textarea { width: 100%; border: 1.5px solid #e0e0e0; border-radius: 12px; padding: 10px; min-height: 80px; box-sizing: border-box; }
+
+        /* BUTTONS */
+        .main-btn { width: 100%; padding: 16px; border-radius: 12px; border: none; font-size: 16px; font-weight: 600; color: white; background: #ccc; cursor: not-allowed; transition: 0.3s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .main-btn.active { background: var(--primary); cursor: pointer; box-shadow: 0 4px 15px rgba(67, 97, 238, 0.4); }
+        .main-btn.active-green { background: #06d6a0; cursor: pointer; box-shadow: 0 4px 15px rgba(6, 214, 160, 0.4); }
+
+        .hist-btn { width: 100%; background: #eef2ff; border: 1px solid var(--primary); color: var(--primary); padding: 12px; border-radius: 12px; font-weight: 600; cursor: pointer; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        
+        /* LIST ITEMS */
+        .list-box { display: block; margin-top: 10px; } 
+        .date-header { background: #e9ecef; color: #555; padding: 8px 15px; border-radius: 8px; font-size: 13px; font-weight: 600; margin: 15px 0 10px 0; display: inline-block; }
+
+        .item { background: #fff; padding: 15px; border-radius: 15px; margin-bottom: 10px; border: 1px solid #f0f0f0; position: relative; box-shadow: 0 2px 5px rgba(0,0,0,0.02); }
+        .item-row { display: flex; justify-content: space-between; align-items: flex-start; }
+        .i-name { font-weight: 600; font-size: 15px; color: #333; }
+        /* NOTE STYLE */
+        .i-note { font-size: 12px; color: var(--primary); background: #f0f4ff; padding: 5px 10px; border-radius: 6px; margin-top: 6px; display: block; width: fit-content; border-left: 3px solid var(--primary); }
+        
+        .i-amt { font-weight: 700; font-size: 16px; white-space: nowrap; }
+        .red { color: #e63946; } .green { color: #06d6a0; } .blue { color: var(--primary); }
+
+        /* ADMIN DELETE BUTTON */
+        .btn-del { margin-top: 10px; background: #fff5f5; color: var(--danger); border: 1px solid #ffe0e0; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; width: 100%; display: flex; align-items: center; justify-content: center; gap: 5px; }
+        .btn-del:active { background: var(--danger); color: #fff; }
+
+        /* SIDENAV */
+        .sidenav { height: 100%; width: 0; position: fixed; top: 0; left: 0; background: #fff; z-index: 1000; overflow-x: hidden; transition: 0.4s; padding-top: 60px; box-shadow: 5px 0 20px rgba(0,0,0,0.1); }
+        .sidenav a { padding: 15px 25px; text-decoration: none; font-size: 16px; color: #333; display: flex; align-items: center; gap: 15px; border-bottom: 1px solid #f9f9f9; }
+        .closebtn { position: absolute; top: 15px; right: 20px; font-size: 30px; cursor: pointer; color: #888; }
+
+        /* PAGES */
+        .page { display: none; animation: fadeIn 0.3s; } 
+        .page.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .msg { text-align: center; margin-top: 15px; font-size: 14px; font-weight: 600; min-height: 20px; }
+        .empty-msg { text-align: center; color: #aaa; margin-top: 20px; font-style: italic; }
+
+        /* MODALS */
+        .modal { display: none; position: fixed; z-index: 200; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(3px); align-items: center; justify-content: center; }
+        .modal-content { background-color: #fff; margin: auto; padding: 25px; border-radius: 20px; width: 85%; max-width: 400px; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.3); animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        .close-modal { position: absolute; top: 15px; right: 20px; color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .modal-title { text-align: center; font-size: 16px; font-weight: 600; margin-bottom: 20px; color: var(--primary); }
+
+        /* ADMIN TAB BUTTONS */
+        .admin-tabs { display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 5px; }
+        .tab-btn { padding: 8px 15px; border-radius: 20px; border: 1px solid #ddd; background: #fff; font-size: 13px; font-weight: 600; white-space: nowrap; cursor: pointer; }
+        .tab-btn.active-tab { background: #333; color: #fff; border-color: #333; }
+
+        /* --- CALENDAR MODAL CSS --- */
+        #calendarOverlay { display: none; position: fixed; z-index: 999; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); align-items: center; justify-content: center; }
+        .calendar-card { background: #1c1c1e; width: 90%; max-width: 380px; border-radius: 20px; border: 1px solid #333; box-shadow: 0 20px 60px rgba(0,0,0,0.6); overflow: hidden; display: flex; flex-direction: column; animation: slideUp 0.3s ease-out; }
+        .cal-header { display: flex; gap: 10px; padding: 20px 20px 10px 20px; border-bottom: 1px solid #2c2c2e; }
+        .cal-select { background: #2c2c2e; color: #fff; border: none; padding: 10px 15px; border-radius: 8px; font-size: 16px; font-weight: 500; cursor: pointer; appearance: none; outline: none; transition: 0.2s; }
+        #yearSelect { flex: 0.4; text-align: center; } 
+        #monthSelect { flex: 0.6; text-align: left; padding-left: 15px; }
+        .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; padding: 15px 10px 5px 10px; }
+        .weekdays span { font-size: 14px; color: #8e8e93; font-weight: 500; }
+        .weekdays span.sat { color: #ff453a; }
+        .grid-wrapper { position: relative; height: 280px; overflow: hidden; margin: 0 10px; }
+        .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; position: absolute; width: 100%; top: 0; left: 0; padding: 5px 0; transition: transform 0.3s; }
+        .slide-next-enter { transform: translateX(100%); opacity: 0; }
+        .slide-next-active { transform: translateX(0); opacity: 1; }
+        .slide-next-exit { transform: translateX(-100%); opacity: 0; }
+        .slide-prev-enter { transform: translateX(-100%); opacity: 0; }
+        .slide-prev-active { transform: translateX(0); opacity: 1; }
+        .slide-prev-exit { transform: translateX(100%); opacity: 0; }
+        .day { height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 8px; font-size: 18px; cursor: pointer; color: #e5e5e5; transition: 0.1s; user-select: none; }
+        .day:active { background: #333; }
+        .day.empty { pointer-events: none; }
+        .day.saturday { color: #ff453a; }
+        .day.selected { background: #0a84ff; color: #fff; font-weight: 700; box-shadow: 0 2px 8px rgba(10, 132, 255, 0.4); }
+        .day.selected.saturday { color: #fff; }
+        .day.today { border: 2px solid #06d6a0; color: #06d6a0; font-weight: bold; }
+        .day.selected.today { border: none; color: white; }
+        .footer-row { background: #252528; border-top: 1px solid #333; padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; }
+        .date-label { font-size: 15px; color: #8e8e93; font-weight: 500; }
+        .date-label span { color: #fff; font-weight: 600; margin-left: 5px; font-size: 16px; }
+        .action-btns { display: flex; gap: 10px; }
+        .c-btn { border: none; padding: 8px 16px; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; }
+        .btn-cancel { background: transparent; color: #ff453a; }
+        .btn-save { background: #0a84ff; color: #fff; }
+
+        /* --- PROFESSIONAL APP LOCK SCREEN --- */
+        #appLockScreen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: linear-gradient(135deg, #1e272e, #111);
+            z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            color: #ecf0f1; font-family: 'Courier New', monospace;
+        }
+        .lock-icon { font-size: 40px; margin-bottom: 15px; color: #e74c3c; }
+        .lock-title { font-size: 22px; margin-bottom: 25px; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; text-shadow: 0 0 10px rgba(255,255,255,0.1); }
+        
+        .lock-container { position: relative; width: 340px; text-align: center; }
+        
+        .digit-boxes { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; position: relative; z-index: 2; pointer-events: none;}
+        .digit-box { 
+            width: 20px; height: 30px; 
+            border: 1px solid #555; background: rgba(255,255,255,0.05);
+            display: flex; align-items: center; justify-content: center; 
+            font-size: 18px; border-radius: 4px; color: #00d2d3;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+        }
+        
+        /* FIX: z-index lowered so buttons can be clicked */
+        #lockInput { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: default; z-index: 1; }
+        
+        .hint-text { 
+            position: relative; z-index: 10; /* Clickable */
+            font-size: 14px; color: #7f8c8d; margin-top: 25px; 
+            letter-spacing: 1px; transition: 0.3s; padding: 10px; border-radius: 5px;
+            user-select: none; -webkit-user-select: none;
+        }
+        .hint-text.active-code { 
+            background: rgba(255, 193, 7, 0.1); color: #ffca28; border: 1px dashed #ffca28; cursor: pointer;
+        }
+
+        .instruction-note { font-size: 11px; color: #aaa; margin-top: 5px; display: none; position: relative; z-index: 10; }
+        
+        .shake-anim { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
+        @keyframes shake { 10%, 90% { transform: translate3d(-2px, 0, 0); } 20%, 80% { transform: translate3d(4px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-6px, 0, 0); } 40%, 60% { transform: translate3d(6px, 0, 0); } }
+        
+        /* FIX: z-index raised */
+        .secret-link { margin-top: 20px; display: none; animation: fadeIn 0.5s; position: relative; z-index: 10; }
+        .secret-btn { 
+            background: transparent; border: 1px solid #00d2d3; color: #00d2d3; 
+            padding: 10px 20px; border-radius: 30px; cursor: pointer; 
+            font-family: 'Courier New', monospace; font-size: 14px; font-weight: bold;
+            transition: 0.3s;
+        }
+        .secret-btn:active { background: #00d2d3; color: #000; }
+        .copied-msg { position: absolute; top: -30px; left: 50%; transform: translateX(-50%); background: #2ecc71; color: white; padding: 5px 10px; font-size: 12px; border-radius: 5px; opacity: 0; transition: 0.3s; pointer-events: none; z-index: 20;}
+        .copied-msg.show { opacity: 1; top: -40px; }
+
+    </style>
+</head>
+<body>
+
+<!-- APP LOCK OVERLAY -->
+<div id="appLockScreen">
+    <div class="lock-icon"><i class="fas fa-shield-alt"></i></div>
+    <div class="lock-title">System Security</div>
+    
+    <div class="lock-container">
+        <!-- 12 Boxes -->
+        <div class="digit-boxes" id="boxContainer">
+            <div class="digit-box"></div><div class="digit-box"></div><div class="digit-box"></div><div class="digit-box"></div>
+            <div class="digit-box"></div><div class="digit-box"></div><div class="digit-box"></div><div class="digit-box"></div>
+            <div class="digit-box"></div><div class="digit-box"></div><div class="digit-box"></div><div class="digit-box"></div>
+        </div>
+        
+        <input type="text" id="lockInput" autocomplete="off" autofocus>
+        
+        <!-- HINT AREA -->
+        <div style="position:relative;">
+            <div class="hint-text" id="passHint">Hint: s****ak****i</div>
+            <div class="copied-msg" id="copyBadge">Copied!</div>
+        </div>
+        
+        <div class="instruction-note" id="instNote">Long press hint number to copy & click below</div>
+
+        <!-- CLICK HERE BUTTON -->
+        <div class="secret-link" id="secretArea">
+            <button class="secret-btn" onclick="checkSecretCode()">Click Verification</button>
+        </div>
+    </div>
+</div>
+
+<!-- SIDEBAR -->
+<div id="mySidenav" class="sidenav">
+  <span class="closebtn" onclick="closeNav()">&times;</span>
+  <div style="padding: 20px; font-weight:bold; color:#aaa; font-size:12px; letter-spacing:1px;">MENU</div>
+  <a href="#" onclick="go('kharcha')"><i class="fas fa-wallet"></i> खर्च खाता (User)</a>
+  <a href="#" onclick="go('jamma')"><i class="fas fa-piggy-bank"></i> जम्मा खाता (User)</a>
+  <div style="border-top:1px solid #f0f0f0; margin:10px 20px;"></div>
+  <!-- ADMIN PANEL BUTTON -->
+  <a href="#" onclick="openAdminAuth()"><i class="fas fa-user-shield"></i> Admin Panel</a>
+</div>
+
+<!-- HEADER -->
+<div class="header">
+    <i class="fas fa-bars menu-icon" onclick="openNav()"></i>
+    <span class="header-title" id="page-title">खर्च खाता</span>
+    <i class="fas fa-plus-circle add-btn show" id="k-add-btn" onclick="openBudgetModal()"></i> 
+    <div style="width:24px; display:none;" id="j-placeholder"></div>
+</div>
+
+<!-- ============================================= -->
+<!-- USER: KHARCHA PAGE -->
+<!-- ============================================= -->
+<div id="kharcha" class="page active">
+    <div class="container">
+        <div class="total-card bg-exp">
+            <div class="t-lbl">जम्मा घर खर्च रकम (AVAILABLE)</div>
+            <span class="t-amt">Rs. <span id="k_total">0</span></span>
+        </div>
+        <div class="card">
+            <div class="input-wrap"><i class="far fa-calendar-alt"></i><input type="text" id="k_date" class="date-input" placeholder="मिति छान्नुहोस्" readonly onclick="openCalendar('k_date')"></div>
+            <div class="input-wrap"><i class="fas fa-shopping-bag"></i><input type="text" id="k_name" placeholder="के किन्नुभयो?"></div>
+            <div class="note-btn" onclick="toggleNote()"><span><i class="fas fa-pen"></i> थप नोट (Optional)</span><i class="fas fa-chevron-down" id="n-icon"></i></div>
+            <div id="note-area"><textarea id="k_details" placeholder="विवरण यहाँ लेख्नुहोस्..."></textarea></div>
+            <div class="input-wrap" id="k_amt_wrap"><i class="fas fa-coins"></i><input type="number" id="k_amt" placeholder="रकम खर्च राख्नुहोस्"></div>
+            <div class="input-wrap"><i class="fas fa-lock"></i><input type="password" id="k_pin" placeholder="Security PIN (8888 or 1999)" maxlength="4" inputmode="numeric" oninput="checkPin('kharcha')"></div>
+        </div>
+        <button id="btn_k" class="main-btn" onclick="saveData('kharcha')" disabled>🔒 Locked</button>
+        <div id="msg_k" class="msg"></div>
+        <button class="hist-btn" onclick="toggleHist('kharcha')" id="btn_txt_kharcha"><span>📜 इतिहास लुकाउनुहोस् (Hide History)</span><i class="fas fa-chevron-up"></i></button>
+        <div id="list_kharcha" class="list-box"></div>
+    </div>
+</div>
+
+<!-- ============================================= -->
+<!-- USER: JAMMA PAGE -->
+<!-- ============================================= -->
+<div id="jamma" class="page">
+    <div class="container">
+        <div class="total-card bg-inc">
+            <div class="t-lbl">TOTAL DEPOSITS</div>
+            <span class="t-amt">Rs. <span id="j_total">0</span></span>
+        </div>
+        <div class="card">
+            <div class="input-wrap"><i class="far fa-calendar-alt"></i><input type="text" id="j_date" class="date-input" placeholder="मिति छान्नुहोस्" readonly onclick="openCalendar('j_date')"></div>
+            <div class="input-wrap"><i class="fas fa-hand-holding-usd"></i><input type="text" id="j_name" placeholder="आम्दानीको स्रोत"></div>
+            <div class="input-wrap"><i class="fas fa-coins"></i><input type="number" id="j_amt" placeholder="रकम"></div>
+            <div class="input-wrap"><i class="fas fa-lock"></i><input type="password" id="j_pin" placeholder="Security PIN (8888 or 1999)" maxlength="4" inputmode="numeric" oninput="checkPin('jamma')"></div>
+        </div>
+        <button id="btn_j" class="main-btn" onclick="saveData('jamma')" disabled>🔒 Locked</button>
+        <div id="msg_j" class="msg"></div>
+        <button class="hist-btn" onclick="toggleHist('jamma')" id="btn_txt_jamma"><span>📜 इतिहास लुकाउनुहोस् (Hide History)</span><i class="fas fa-chevron-up"></i></button>
+        <div id="list_jamma" class="list-box"></div>
+    </div>
+</div>
+
+<!-- ============================================= -->
+<!-- ADMIN PANEL (Hidden until password verified) -->
+<!-- ============================================= -->
+<div id="admin_dashboard" class="page">
+    <div class="container">
+        <!-- Budget Manager Card -->
+        <div class="total-card bg-dark">
+            <div class="t-lbl">TOTAL BUDGET ADDED</div>
+            <span class="t-amt">Rs. <span id="adm_budget_total">0</span></span>
+        </div>
+
+        <!-- Admin Tabs -->
+        <div class="admin-tabs">
+            <button class="tab-btn active-tab" onclick="switchAdminTab('adm_kharcha', this)">खर्च (Expenses)</button>
+            <button class="tab-btn" onclick="switchAdminTab('adm_budget', this)">बजेट (Budget)</button>
+            <button class="tab-btn" onclick="switchAdminTab('adm_jamma', this)">जम्मा (Deposits)</button>
+        </div>
+
+        <!-- Admin Lists with Delete -->
+        <div id="adm_kharcha" class="admin-view-list"></div>
+        <div id="adm_budget" class="admin-view-list" style="display:none;"></div>
+        <div id="adm_jamma" class="admin-view-list" style="display:none;"></div>
+
+    </div>
+</div>
+
+<!-- ============================================= -->
+<!-- MODALS -->
+<!-- ============================================= -->
+
+<!-- BUDGET ADD MODAL (For User) -->
+<div id="budgetModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeBudgetModal()">&times;</span>
+        <div class="modal-title">घर को लागी रकम खर्च छुटै थप्नुहोस</div>
+        <div class="input-wrap"><i class="fas fa-coins"></i><input type="number" id="b_amt" placeholder="रकम थप्नुहोस"></div>
+        <div class="input-wrap"><i class="fas fa-lock"></i><input type="password" id="b_pin" placeholder="Security PIN" maxlength="4" inputmode="numeric" oninput="checkBPin()"></div>
+        <button id="btn_b" class="main-btn" onclick="saveBudget()" disabled>🔒 Locked</button>
+        <div id="msg_b" class="msg"></div>
+    </div>
+</div>
+
+<!-- ADMIN AUTH MODAL -->
+<div id="adminAuthModal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeAdminAuth()">&times;</span>
+        <div class="modal-title">ADMIN ACCESS</div>
+        <p style="text-align:center; font-size:13px; color:#666; margin-bottom:15px;">Please enter password to continue</p>
+        <div class="input-wrap"><i class="fas fa-key"></i><input type="password" id="admin_pass" placeholder="Enter Password"></div>
+        <button class="main-btn active" onclick="checkAdminPass()">Login</button>
+        <div id="msg_admin" class="msg"></div>
+    </div>
+</div>
+
+<!-- CALENDAR OVERLAY -->
+<div id="calendarOverlay">
+    <div class="calendar-card">
+        <div class="cal-header">
+            <select id="yearSelect" class="cal-select" onchange="jumpToDate()"></select>
+            <select id="monthSelect" class="cal-select" onchange="jumpToDate()"></select>
+        </div>
+        <div class="weekdays"><span>आइत</span><span>सोम</span><span>मंगल</span><span>बुध</span><span>बिही</span><span>शुक्र</span><span class="sat">शनि</span></div>
+        <div class="grid-wrapper" id="swipeArea"><div class="days-grid" id="daysGrid"></div></div>
+        <div class="footer-row">
+            <div class="date-label">Date: <span id="displayDate">--</span></div>
+            <div class="action-btns">
+                <button class="c-btn btn-cancel" onclick="closeCalendar()">Cancel</button>
+                <button class="c-btn btn-save" onclick="saveCalendarDate()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // --- APP LOCK & HACKER PUZZLE LOGIC START ---
+    const lockInput = document.getElementById('lockInput');
+    const boxes = document.querySelectorAll('.digit-box');
+    const lockScreen = document.getElementById('appLockScreen');
+    const passHint = document.getElementById('passHint');
+    const secretArea = document.getElementById('secretArea');
+    const lockContainer = document.querySelector('.lock-container');
+    const instNote = document.getElementById('instNote');
+    const copyBadge = document.getElementById('copyBadge');
+    
+    let failCount = 0;
+    let secretActive = false;
+    const SECRET_CODE = "01010011.75";
+    
+    // Auto focus
+    window.onload = function() { lockInput.focus(); }
+    document.getElementById('appLockScreen').onclick = function(e) { 
+        // Only re-focus if NOT clicking the button or active hint
+        if(e.target.tagName !== 'BUTTON' && e.target.id !== 'passHint') {
+            lockInput.focus(); 
+        }
+    }
+
+    lockInput.addEventListener('input', function(e) {
+        let val = e.target.value.toLowerCase();
+        
+        // 1. INSTANT UNLOCK (Check if "gs" is typed)
+        if(val === 'gs') {
+            lockScreen.style.display = 'none';
+            return;
+        }
+
+        // 2. Fill boxes visually
+        boxes.forEach((box, idx) => {
+            box.innerText = val[idx] ? '*' : '';
+            if(val[idx]) box.style.borderColor = '#00d2d3';
+            else box.style.borderColor = '#555';
+        });
+
+        // 3. Max Length Check (12 digits)
+        if(val.length >= 12) {
+            failCount++;
+            triggerShake();
+            e.target.value = ''; // Clear input
+            boxes.forEach(b => { b.innerText = ''; b.style.borderColor='#555'; }); // Clear visual
+            
+            // 4. Activate Secret Mode after 5 fails
+            if(failCount >= 5) {
+                activateSecretMode();
+            }
+        }
+    });
+
+    function triggerShake() {
+        lockContainer.classList.add('shake-anim');
+        setTimeout(() => { lockContainer.classList.remove('shake-anim'); }, 500);
+    }
+    
+    function activateSecretMode() {
+        secretActive = true;
+        passHint.innerText = SECRET_CODE;
+        passHint.classList.add('active-code');
+        instNote.style.display = 'block';
+        secretArea.style.display = 'block';
+    }
+
+    // --- LONG PRESS COPY LOGIC ---
+    let pressTimer;
+    passHint.addEventListener('mousedown', startPress);
+    passHint.addEventListener('touchstart', startPress);
+    passHint.addEventListener('mouseup', cancelPress);
+    passHint.addEventListener('mouseleave', cancelPress);
+    passHint.addEventListener('touchend', cancelPress);
+
+    function startPress() {
+        if(!secretActive) return;
+        pressTimer = setTimeout(() => {
+            navigator.clipboard.writeText(SECRET_CODE).then(() => {
+                showCopyBadge();
+            }).catch(() => {
+                prompt("Copy this code:", SECRET_CODE);
+            });
+        }, 600); // 600ms long press
+    }
+    function cancelPress() { clearTimeout(pressTimer); }
+
+    function showCopyBadge() {
+        copyBadge.classList.add('show');
+        setTimeout(() => copyBadge.classList.remove('show'), 1500);
+    }
+
+    // CLICK HERE Logic (UPDATED: DIRECT OPEN)
+    window.checkSecretCode = function() {
+        // Direct Open without Prompt
+        loadPuzzleGame(); 
+    }
+
+    // --- EMBEDDED HACKER PUZZLE HTML ---
+    function loadPuzzleGame() {
+        // Updated Puzzle Logic: Q1=G, Q2=S (31-12=19), Final=GS
+        const puzzleHTML = `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hacker Puzzle Pro</title>
+<style>
+/* --- BASE STYLES --- */
+body{margin:0;padding:0;font-family:"Courier New", monospace;background:black;color:#00ff00;}
+.wrapper{min-height:100vh;display:flex;justify-content:center;align-items:center;padding:10px;}
+.terminal{width:95%;max-width:700px;border:2px solid #00ff00;padding:20px;box-shadow:0 0 25px #00ff00;overflow-y:auto;position: relative;background: rgba(0, 20, 0, 0.9);}
+h1{text-align:center;letter-spacing:4px;margin-bottom:20px;text-shadow: 0 0 5px #00ff00;border-bottom: 1px solid #00ff00;padding-bottom: 10px;}
+input{width:100%;padding:12px;background:black;color:#00ff00;border:1px solid #00ff00;margin-top:5px;margin-bottom:15px;font-size:16px;box-sizing: border-box;}
+input:focus {outline: none;box-shadow: 0 0 15px #00ff00;}
+button{width:100%;padding:12px;background:black;color:#00ff00;border:1px solid #00ff00;cursor:pointer;font-size:18px;font-weight: bold;letter-spacing: 2px;transition: 0.3s;text-transform: uppercase;}
+button:hover{background:#00ff00;color:black;box-shadow: 0 0 20px #00ff00;}
+.output{border:1px dashed #00ff00;padding:12px;min-height:50px;margin-top:10px;text-align:center;}
+a.sk-box{display:inline-block;padding:12px 25px;margin-top:10px;border:2px solid #00ff00;box-shadow:0 0 10px #00ff00;cursor:pointer;font-size:20px;letter-spacing:5px;text-decoration: none;color: #00ff00;}
+a.sk-box:hover{background:#00ff00;color:black;box-shadow:0 0 25px #00ff00;}
+.question{margin-bottom:20px;}
+.note{border:1px dashed #00ff00;padding:10px;font-size:14px;margin-top:15px;color: #ccffcc;text-align: center;}
+.mapping{border:1px solid #00ff00;padding:15px;margin-bottom:25px;font-size:14px;line-height: 1.8;background: #001100;}
+#final-screen {display: none;text-align: center;padding: 30px 10px;}
+.success-title {font-size: 36px;font-weight: bold;color: #00ff00;text-shadow: 2px 2px 0px #003300;animation: glitch 1s linear infinite;margin-bottom: 30px;}
+.lock-icon {font-size: 50px;margin-bottom: 20px;}
+.password-box {border: 3px solid #00ff00;padding: 20px;margin-top: 20px;background: rgba(0, 255, 0, 0.1);box-shadow: 0 0 30px #00ff00;animation: pulse 1.5s infinite;}
+.final-code {font-size: 40px;font-weight: bold;color: white;background: #00ff00;padding: 5px 15px;color: black;margin-left: 10px;}
+@keyframes glitch {2%, 64% { transform: translate(2px,0) skew(0deg); }4%, 60% { transform: translate(-2px,0) skew(0deg); }62% { transform: translate(0,0) skew(5deg); }}
+@keyframes pulse {0% { box-shadow: 0 0 15px #00ff00; transform: scale(1); }50% { box-shadow: 0 0 40px #00ff00; transform: scale(1.02); }100% { box-shadow: 0 0 15px #00ff00; transform: scale(1); }}
+</style>
+</head>
+<body>
+<div class="wrapper">
+<div class="terminal" id="puzzle1">
+    <h1>SYSTEM ENTRY: LEVEL 1</h1>
+    <input id="code" placeholder="Enter code (Binary.ASCII)">
+    <button onclick="decode()">DECRYPT MESSAGE</button>
+    <div class="output" id="result">WAITING FOR INPUT...</div>
+</div>
+<div class="terminal" id="puzzle2" style="display:none; min-height: 60vh;">
+    <h1>SYSTEM LEVEL 2</h1>
+    <div id="p2-form">
+        <div class="mapping"><strong>DECRYPTION TABLE (Alphabet = Number):</strong><br>A=1, B=2, C=3, D=4, E=5, F=6, G=7, H=8, I=9, J=10, K=11, L=12, M=13, N=14, O=15, P=16, Q=17, R=18, S=19, T=20, U=21, V=22, W=23, X=24, Y=25, Z=26</div>
+        <div class="question"><p><strong>Question 1)</strong> 19 - 12 = ? <br>(हिसाब गरेर आएको Number लाई Alphabet मा लेख)</p><input id="ans1" placeholder="Answer 1"></div>
+        <div class="question"><p><strong>Question 2)</strong> 11 + 8 = ? <br>(हिसाब गरेर आएको Number लाई Alphabet मा लेख)</p><input id="ans2" placeholder="Answer 2"></div>
+        <button onclick="checkFinal()">UNLOCK SYSTEM</button>
+        <div class="note">🔐 Note: माथिको Table हेरेर सही Alphabet पत्ता लगाउनुहोस्।</div>
+        <div class="output" id="p2-msg" style="display:none; border-color: red; color: red; margin-top:20px;"></div>
+    </div>
+    <div id="final-screen">
+        <div class="success-title">ACCESS GRANTED</div>
+        <div class="lock-icon">🔓</div>
+        <p>IDENTITY VERIFIED.</p><p>SYSTEM UNLOCKED SUCCESSFULLY.</p>
+        <div class="password-box">CONNECTED PASSWORD:<br><br><span class="final-code">GS</span></div>
+        <p style="margin-top:30px; font-size:12px;">HACKER MODE: ENABLED</p>
+    </div>
+</div>
+</div>
+<script>
+function decode(){
+    let input=document.getElementById("code").value.trim();
+    let result="";
+    let blocks=input.split(" ");
+    for(let i=0;i<blocks.length;i++){
+        let parts=blocks[i].split(".");
+        if(parts.length===2){
+            let binChar=String.fromCharCode(parseInt(parts[0],2));
+            let asciiChar=String.fromCharCode(parseInt(parts[1]));
+            result+=binChar+asciiChar;
+        }
+    }
+    if(result==="SK"){
+        document.getElementById("result").innerHTML='ACCESS CODE FOUND<br><br><a class="sk-box" onclick="openPuzzle2()">S K</a>';
+    }else{
+        document.getElementById("result").innerText=result || "INVALID CODE";
+    }
+}
+function openPuzzle2(){document.getElementById("puzzle1").style.display="none";document.getElementById("puzzle2").style.display="block";}
+function checkFinal(){
+    let a1 = document.getElementById("ans1").value.trim().toLowerCase();
+    let a2 = document.getElementById("ans2").value.trim().toLowerCase();
+    let msgBox = document.getElementById("p2-msg");
+    // G = 7, S = 19
+    if(a1 === "g" && a2 === "s"){
+        document.getElementById("p2-form").style.display = "none";
+        document.getElementById("final-screen").style.display = "block";
+    } else {
+        msgBox.style.display = "block";
+        msgBox.innerText = "ACCESS DENIED! WRONG ANSWER.";
+        let terminal = document.getElementById("puzzle2");
+        terminal.style.transform = "translateX(10px)";
+        setTimeout(() => terminal.style.transform = "translateX(-10px)", 50);
+        setTimeout(() => terminal.style.transform = "translateX(10px)", 100);
+        setTimeout(() => terminal.style.transform = "translateX(0)", 150);
+    }
+}
+<\/script>
+</body>
+</html>`;
+        document.open();
+        document.write(puzzleHTML);
+        document.close();
+    }
+    // --- END APP LOCK LOGIC ---
+
+
+    // --- FIREBASE CONFIG ---
+    const CFG = { apiKey: "AIzaSyBfSCnGH7q2nJoI4QPzSPuK6JKbP0esam0", authDomain: "ghar-ko-hisab.firebaseapp.com", databaseURL: "https://ghar-ko-hisab-default-rtdb.firebaseio.com", projectId: "ghar-ko-hisab", storageBucket: "ghar-ko-hisab.appspot.com", messagingSenderId: "961311885732", appId: "1:961311885732:web:6f23ad5983220aacc21931" };
+    
+    // VALID PINS (User Data Entry)
+    const VALID_PINS = ["8888", "1999"];
+    
+    firebase.initializeApp(CFG); const db = firebase.database();
+
+    // --- NAVIGATION ---
+    function openNav() { document.getElementById("mySidenav").style.width = "280px"; }
+    function closeNav() { document.getElementById("mySidenav").style.width = "0"; }
+    
+    function go(p) {
+        document.querySelectorAll('.page').forEach(e => e.classList.remove('active'));
+        document.getElementById(p).classList.add('active');
+        
+        let title = "खर्च खाता";
+        if(p === 'jamma') title = "जम्मा खाता";
+        if(p === 'admin_dashboard') title = "ADMIN PANEL";
+        
+        document.getElementById('page-title').innerText = title;
+        document.getElementById('k-add-btn').classList.toggle('show', p === 'kharcha');
+        closeNav();
+    }
+    
+    // --- ADMIN AUTH & LOGIC ---
+    function openAdminAuth() {
+        closeNav();
+        document.getElementById('adminAuthModal').style.display = 'flex';
+    }
+    function closeAdminAuth() {
+        document.getElementById('adminAuthModal').style.display = 'none';
+        document.getElementById('admin_pass').value = '';
+        document.getElementById('msg_admin').innerHTML = '';
+    }
+    
+    function checkAdminPass() {
+        const p = document.getElementById('admin_pass').value;
+        const msg = document.getElementById('msg_admin');
+        
+        if(p === 'khata') {
+            msg.innerHTML = '<span style="color:green"><i class="fas fa-check-circle"></i> Success! Opening...</span>';
+            setTimeout(() => {
+                closeAdminAuth();
+                go('admin_dashboard'); // Switch to Admin View
+                renderAdminData();     // Force refresh
+            }, 500);
+        } else {
+            msg.innerHTML = '<span style="color:red">❌ गलत पासवर्ड (Wrong Password)</span>';
+        }
+    }
+
+    // --- ADMIN TABS & DELETE ---
+    function switchAdminTab(id, btn) {
+        document.querySelectorAll('.admin-view-list').forEach(e => e.style.display = 'none');
+        document.getElementById(id).style.display = 'block';
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active-tab'));
+        btn.classList.add('active-tab');
+    }
+
+    function del(path, key) {
+        if(confirm("⚠ के तपाईं यो रेकर्ड डिलिट गर्न चाहनुहुन्छ? (Delete Record?)")) {
+            db.ref(path).child(key).remove()
+            .then(() => { alert("Record Deleted!"); })
+            .catch(e => alert(e.message));
+        }
+    }
+
+    // --- MAIN USER FUNCTIONS ---
+    window.onclick = function(e) { 
+        if (e.target == document.getElementById('budgetModal')) closeBudgetModal(); 
+        if (e.target == document.getElementById('adminAuthModal')) closeAdminAuth();
+    }
+    
+    function openBudgetModal() { document.getElementById('budgetModal').style.display = 'flex'; }
+    function closeBudgetModal() { document.getElementById('budgetModal').style.display = 'none'; document.getElementById('msg_b').innerHTML=''; document.getElementById('b_amt').value=''; document.getElementById('b_pin').value=''; }
+    
+    function toggleNote() { const d = document.getElementById('note-area'); const i = document.getElementById('n-icon'); if(d.style.display==='block'){d.style.display='none';i.className='fas fa-chevron-down';}else{d.style.display='block';i.className='fas fa-chevron-up';} }
+    function toggleHist(type) { const l = document.getElementById('list_' + type); const b = document.getElementById('btn_txt_' + type); if(l.style.display==='none'){l.style.display='block';b.innerHTML='<span>📜 इतिहास लुकाउनुहोस् (Hide History)</span> <i class="fas fa-chevron-up"></i>';}else{l.style.display='none';b.innerHTML='<span>📜 इतिहास हेर्नुहोस् (Show History)</span> <i class="fas fa-chevron-down"></i>';} }
+    
+    function calc() { const n=document.getElementById('k_name').value; const d=document.getElementById('k_details').value; let tot=0; (n+'+'+d).replace(/,/g,'+').split('+').forEach(x=>{let m=x.match(/(\d+(\.\d+)?)/);if(m)tot+=parseFloat(m[0]);}); if(tot>0){document.getElementById('k_amt').value=tot;document.getElementById('k_amt_wrap').classList.add('calc');}else{document.getElementById('k_amt_wrap').classList.remove('calc');} }
+    document.getElementById('k_name').addEventListener('input',calc); document.getElementById('k_details').addEventListener('input',calc);
+
+    // UPDATED CHECK PIN FUNCTION
+    function checkPin(t) { 
+        const p = document.getElementById(t==='kharcha'?'k_pin':'j_pin').value; 
+        const b = document.getElementById(t==='kharcha'?'btn_k':'btn_j'); 
+        
+        if(VALID_PINS.includes(p)){
+            b.disabled=false;
+            b.innerHTML='<i class="fas fa-save"></i> Save Data';
+            b.classList.add(t==='kharcha'?'active':'active-green');
+        } else {
+            b.disabled=true;
+            b.innerHTML='🔒 Locked';
+            b.className='main-btn';
+        } 
+    }
+    
+    function checkBPin() { 
+        const p = document.getElementById('b_pin').value; 
+        const b = document.getElementById('btn_b'); 
+        if(VALID_PINS.includes(p)){
+            b.disabled=false;
+            b.innerHTML='<i class="fas fa-save"></i> Add Money';
+            b.classList.add('active');
+        } else {
+            b.disabled=true;
+            b.innerHTML='🔒 Locked';
+            b.className='main-btn';
+        } 
+    }
+
+    function saveData(type) {
+        const p=(type==='kharcha')?'k':'j'; const date=document.getElementById(p+'_date').value.trim(); const name=document.getElementById(p+'_name').value.trim(); const amt=document.getElementById(p+'_amt').value; const note=type==='kharcha'?document.getElementById('k_details').value.trim():''; const msg=document.getElementById('msg_'+p);
+        if(!date||!name||!amt){msg.innerHTML="<span style='color:red'>❌ सबै भर्नुहोस् (मिति सहित)</span>";return;}
+        db.ref(type).push({miti:date,bibaran:name,rakam:parseFloat(amt),details:note}).then(()=>{msg.innerHTML="<span style='color:green'>✅ सेभ भयो!</span>";document.getElementById(p+'_name').value='';document.getElementById(p+'_amt').value='';document.getElementById(p+'_pin').value=''; if(type==='kharcha'){document.getElementById('k_details').value='';document.getElementById('k_amt_wrap').classList.remove('calc');} checkPin(type); setTimeout(()=>msg.innerHTML='',3000);}).catch(e=>{msg.innerHTML="<span style='color:red'>"+e.message+"</span>";});
+    }
+    function saveBudget() { const amt=document.getElementById('b_amt').value; const msg=document.getElementById('msg_b'); if(!amt){msg.innerHTML="<span style='color:red'>❌ रकम भर्नुहोस्</span>";return;} db.ref('ghar_budget').push({rakam:parseFloat(amt),date:new Date().toISOString()}).then(()=>{msg.innerHTML="<span style='color:green'>✅ थपियो!</span>";setTimeout(()=>{closeBudgetModal();},1000);}); }
+
+    // --- DATA HANDLING ---
+    let totalBudget=0, totalSpent=0;
+    let rawKharcha=[], rawBudget=[], rawJamma=[];
+
+    function initApp() {
+        // 1. Fetch Budget
+        db.ref('ghar_budget').on('value',s=>{
+            totalBudget=0; rawBudget=[];
+            if(s.exists()) s.forEach(c=>{
+                let v=c.val(); v.key=c.key; 
+                totalBudget+=parseFloat(v.rakam||0);
+                rawBudget.push(v);
+            });
+            updateKharchaTotal();
+            renderAdminData();
+        });
+
+        // 2. Fetch Kharcha
+        db.ref('kharcha').on('value',s=>{
+            document.getElementById('list_kharcha').innerHTML='';
+            totalSpent=0; rawKharcha=[];
+            if(s.exists()) s.forEach(c=>{
+                let v=c.val(); v.key=c.key;
+                rawKharcha.push(v);
+            });
+            
+            rawKharcha.forEach(i=>totalSpent+=parseFloat(i.rakam||0));
+            updateKharchaTotal();
+            renderAdminData();
+
+            if(rawKharcha.length===0){document.getElementById('list_kharcha').innerHTML='<div class="empty-msg">कुनै खर्च छैन।</div>';return;}
+            rawKharcha.sort((a,b)=>a.miti.localeCompare(b.miti));
+            
+            let ld='';
+            rawKharcha.forEach(i=>{
+                if(i.miti!==ld){document.getElementById('list_kharcha').innerHTML+=`<div class="date-header">📅 ${i.miti}</div>`;ld=i.miti;}
+                let nh=i.details?`<span class="i-note">${i.details}</span>`:'';
+                document.getElementById('list_kharcha').innerHTML+=`<div class="item"><div class="item-row"><div><span class="i-name">${i.bibaran}</span></div><span class="i-amt red">- Rs. ${i.rakam}</span></div>${nh}</div>`;
+            });
+        });
+
+        // 3. Fetch Jamma
+        db.ref('jamma').on('value',s=>{
+            document.getElementById('list_jamma').innerHTML='';
+            let t=0; rawJamma=[];
+            if(s.exists()) s.forEach(c=>{
+                let v=c.val(); v.key=c.key;
+                rawJamma.push(v);
+            });
+            
+            rawJamma.forEach(i=>t+=parseFloat(i.rakam||0));
+            document.getElementById('j_total').innerText=t.toFixed(0);
+            renderAdminData();
+
+            if(rawJamma.length===0){document.getElementById('list_jamma').innerHTML='<div class="empty-msg">कुनै जम्मा छैन।</div>';return;}
+            rawJamma.sort((a,b)=>a.miti.localeCompare(b.miti));
+            
+            let ld='';
+            rawJamma.forEach(i=>{
+                if(i.miti!==ld){document.getElementById('list_jamma').innerHTML+=`<div class="date-header">📅 ${i.miti}</div>`;ld=i.miti;}
+                document.getElementById('list_jamma').innerHTML+=`<div class="item"><div class="item-row"><div><span class="i-name">${i.bibaran}</span></div><span class="i-amt green">+ Rs. ${i.rakam}</span></div></div>`;
+            });
+        });
+    }
+    
+    function updateKharchaTotal() { 
+        document.getElementById('k_total').innerText=(totalBudget-totalSpent).toFixed(0); 
+        document.getElementById('adm_budget_total').innerText = totalBudget.toFixed(0);
+    }
+    
+    // RENDER ADMIN LISTS
+    function renderAdminData() {
+        const kList = document.getElementById('adm_kharcha');
+        const bList = document.getElementById('adm_budget');
+        const jList = document.getElementById('adm_jamma');
+        
+        // Render Kharcha
+        kList.innerHTML = '';
+        rawKharcha.slice().sort((a,b)=>b.miti.localeCompare(a.miti)).forEach(i => {
+             // CHECK FOR NOTE
+             let noteHtml = i.details ? `<div class="i-note" style="margin-top:5px; display:block;">${i.details}</div>` : '';
+
+             kList.innerHTML += `
+             <div class="item">
+                <div class="item-row">
+                    <div><div class="i-name">${i.bibaran}</div><small>${i.miti}</small></div>
+                    <div class="i-amt red">- ${i.rakam}</div>
+                </div>
+                ${noteHtml}
+                <button class="btn-del" onclick="del('kharcha','${i.key}')"><i class="fas fa-trash"></i> DELETE</button>
+             </div>`;
+        });
+        
+        // Render Budget
+        bList.innerHTML = '';
+        rawBudget.slice().reverse().forEach(i => {
+             bList.innerHTML += `
+             <div class="item">
+                <div class="item-row">
+                    <div><div class="i-name">Budget Added</div></div>
+                    <div class="i-amt blue">+ ${i.rakam}</div>
+                </div>
+                <button class="btn-del" onclick="del('ghar_budget','${i.key}')"><i class="fas fa-trash"></i> DELETE</button>
+             </div>`;
+        });
+        
+        // Render Jamma
+        jList.innerHTML = '';
+        rawJamma.slice().sort((a,b)=>b.miti.localeCompare(a.miti)).forEach(i => {
+             jList.innerHTML += `
+             <div class="item">
+                <div class="item-row">
+                    <div><div class="i-name">${i.bibaran}</div><small>${i.miti}</small></div>
+                    <div class="i-amt green">+ ${i.rakam}</div>
+                </div>
+                <button class="btn-del" onclick="del('jamma','${i.key}')"><i class="fas fa-trash"></i> DELETE</button>
+             </div>`;
+        });
+    }
+
+    initApp();
+
+    // --- CALENDAR LOGIC (2080-2100) ---
+    const bsData = {
+        2080: [31,32,31,32,31,30,30,30,29,29,30,30], 2081: [31,32,31,32,31,30,30,30,29,30,29,31],
+        2082: [31,32,31,32,31,30,30,30,29,29,30,30], 2083: [31,32,31,32,31,30,30,30,29,30,29,31],
+        2084: [31,32,31,32,31,30,30,30,29,29,30,30], 2085: [31,32,31,32,31,30,30,30,29,30,29,31],
+        2086: [31,32,31,32,31,30,30,30,29,29,30,30], 2087: [31,32,31,32,31,30,30,30,29,30,29,31],
+        2088: [31,32,31,32,31,30,30,30,29,29,30,30], 2089: [31,32,31,32,31,30,30,30,29,30,29,31],
+        2090: [31,32,31,32,31,30,30,30,29,29,30,30], 2091: [31,31,32,31,31,31,30,29,30,29,30,30],
+        2092: [31,31,32,32,31,30,30,29,30,29,30,30], 2093: [31,32,31,32,31,30,30,30,29,29,30,30],
+        2094: [31,31,32,31,31,31,30,29,30,29,30,30], 2095: [31,32,31,32,31,30,30,30,29,29,30,30],
+        2096: [31,31,32,32,31,30,30,29,30,29,30,30], 2097: [31,32,31,32,31,30,30,30,29,30,29,30],
+        2098: [31,31,32,31,31,31,30,29,30,29,30,30], 2099: [31,32,31,32,31,30,30,30,29,30,29,30],
+        2100: [31,32,31,31,31,31,30,30,29,30,29,30]
+    };
+    const refAD = new Date(2024, 3, 13); 
+    const refBS = { y: 2081, m: 0, d: 1 };
+
+    function getRealTimeBS() {
+        const now = new Date();
+        const timeDiff = now.getTime() - refAD.getTime();
+        let daysDiff = Math.floor(timeDiff / (1000 * 3600 * 24));
+        let cY = refBS.y, cM = refBS.m, cD = refBS.d;
+
+        while (daysDiff > 0) {
+            let daysInMonth = (bsData[cY] || bsData[2081])[cM];
+            if (daysDiff >= (daysInMonth - cD + 1)) {
+                daysDiff -= (daysInMonth - cD + 1);
+                cM++; cD = 1;
+                if (cM > 11) { cM = 0; cY++; }
+            } else { cD += daysDiff; daysDiff = 0; }
+        }
+        return { y: cY, m: cM, d: cD };
+    }
+
+    let activeInputId = null; 
+    let todayBS = getRealTimeBS();
+    let currYear = todayBS.y, currMonth = todayBS.m, selectedDate = null;
+    const npMonths = ["बैशाख", "जेठ", "असार", "साउन", "भदौ", "असोज", "कार्तिक", "मंसिर", "पुष", "माघ", "फागुन", "चैत"];
+    const els = { wrapper: document.getElementById('swipeArea'), grid: document.getElementById('daysGrid'), dateLabel: document.getElementById('displayDate'), mSelect: document.getElementById('monthSelect'), ySelect: document.getElementById('yearSelect') };
+
+    function openCalendar(inputId) {
+        activeInputId = inputId; todayBS = getRealTimeBS(); 
+        if(!selectedDate) { currYear = todayBS.y; currMonth = todayBS.m; }
+        document.getElementById('calendarOverlay').style.display = 'flex';
+        initCalendar();
+    }
+    function closeCalendar() { document.getElementById('calendarOverlay').style.display = 'none'; activeInputId = null; }
+    document.getElementById('calendarOverlay').addEventListener('click', function(e){ if(e.target === this) closeCalendar(); });
+
+    function toNepali(num) { const nepaliNums = ['०','१','२','३','४','५','६','७','८','९']; return num.toString().split('').map(d => nepaliNums[d]).join(''); }
+    function pad(n) { return n < 10 ? '0'+n : n; }
+
+    function initCalendar() {
+        els.ySelect.innerHTML = "";
+        for(let y = 2080; y <= 2100; y++) { 
+            let opt = document.createElement('option'); opt.value = y; opt.innerText = toNepali(y);
+            if(y === currYear) opt.selected = true;
+            els.ySelect.appendChild(opt);
+        }
+        els.mSelect.innerHTML = "";
+        npMonths.forEach((m, i) => {
+            let opt = document.createElement('option'); opt.value = i; opt.innerText = m;
+            if(i === currMonth) opt.selected = true;
+            els.mSelect.appendChild(opt);
+        });
+        renderGrid(els.grid, currYear, currMonth);
+        initSwipe();
+    }
+    function getDaysInMonth(y, m) { return (bsData[y] || bsData[2081])[m]; }
+    function getStartDay(y, m) {
+        let totalDays = 0;
+        if(y >= refBS.y) {
+            for(let i = refBS.y; i < y; i++) totalDays += (bsData[i] || []).reduce((a, b) => a + b, 0);
+            for(let i = 0; i < m; i++) totalDays += (bsData[y] || bsData[2081])[i];
+        } else {
+            for(let i = y; i < refBS.y; i++) totalDays -= (bsData[i] || []).reduce((a, b) => a + b, 0);
+            for(let i = m; i < 12; i++) totalDays -= (bsData[y] || bsData[2081])[i];
+        }
+        return (6 + totalDays) % 7;
+    }
+    function renderGrid(gridEl, y, m) {
+        gridEl.innerHTML = "";
+        const startDay = getStartDay(y, m);
+        const totalDays = getDaysInMonth(y, m);
+        for(let i=0; i<startDay; i++) { let div = document.createElement('div'); div.className = 'day empty'; gridEl.appendChild(div); }
+        for(let d=1; d<=totalDays; d++) {
+            let div = document.createElement('div'); div.className = 'day'; div.innerText = toNepali(d);
+            if ((startDay + d - 1) % 7 === 6) div.classList.add('saturday');
+            if(selectedDate && selectedDate.d === d && selectedDate.m === m && selectedDate.y === y) div.classList.add('selected');
+            if(todayBS.d === d && todayBS.m === m && todayBS.y === y) div.classList.add('today');
+            div.onclick = () => selectDay(d);
+            gridEl.appendChild(div);
+        }
+    }
+    function initSwipe() {
+        let startX=0, isDown=false;
+        const w = els.wrapper;
+        w.addEventListener('touchstart', (e)=>{startX=e.touches[0].clientX;isDown=true;},{passive:true});
+        w.addEventListener('touchend', (e)=>{if(isDown)handleSwipe(startX,e.changedTouches[0].clientX);isDown=false;});
+        w.addEventListener('mousedown', (e)=>{startX=e.clientX;isDown=true;});
+        w.addEventListener('mouseup', (e)=>{if(isDown)handleSwipe(startX,e.clientX);isDown=false;});
+    }
+    function handleSwipe(s,e) { if(s-e>50)slideMonth(1); else if(e-s>50)slideMonth(-1); }
+    function slideMonth(dir) {
+        let nextM = currMonth + dir; let nextY = currYear;
+        if(nextM > 11) { nextM = 0; nextY++; } if(nextM < 0) { nextM = 11; nextY--; }
+        if(!bsData[nextY]) return;
+        const oldGrid = els.wrapper.querySelector('.days-grid'), newGrid = document.createElement('div'); 
+        newGrid.className = 'days-grid'; renderGrid(newGrid, nextY, nextM); els.wrapper.appendChild(newGrid);
+        const exitAnim = dir===1?'slide-next-exit':'slide-prev-exit', enterAnim = dir===1?'slide-next-enter':'slide-prev-enter', activeAnim = dir===1?'slide-next-active':'slide-prev-active';
+        oldGrid.classList.add(exitAnim); newGrid.classList.add(enterAnim);
+        void newGrid.offsetWidth;
+        newGrid.classList.add(activeAnim); newGrid.classList.remove(enterAnim);
+        setTimeout(() => { oldGrid.remove(); currMonth = nextM; currYear = nextY; els.ySelect.value=currYear; els.mSelect.value=currMonth; }, 300);
+    }
+    function jumpToDate() { currMonth = parseInt(els.mSelect.value); currYear = parseInt(els.ySelect.value); renderGrid(els.wrapper.querySelector('.days-grid'), currYear, currMonth); }
+    function selectDay(d) { selectedDate = { y: currYear, m: currMonth, d: d }; renderGrid(els.wrapper.querySelector('.days-grid'), currYear, currMonth); els.dateLabel.innerText = `${npMonths[currMonth]} ${toNepali(d)}, ${toNepali(currYear)}`; els.dateLabel.style.color = "#fff"; }
+    function saveCalendarDate() {
+        if(!selectedDate) selectedDate = todayBS;
+        const formattedDate = `${toNepali(selectedDate.y)}-${toNepali(pad(selectedDate.m + 1))}-${toNepali(pad(selectedDate.d))}`;
+        if(activeInputId) document.getElementById(activeInputId).value = formattedDate;
+        closeCalendar();
+    }
+</script>
+</body>
+</html>
